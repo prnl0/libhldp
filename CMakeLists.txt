@@ -15,7 +15,9 @@ set(includes
   utils/filebuffer.hpp
   utils/misc.hpp
 )
-
+set(public_includes
+  api.hpp
+)
 set(fmt_includes
   core.h
   format.h
@@ -23,13 +25,14 @@ set(fmt_includes
 )
 
 list(TRANSFORM includes PREPEND "src/")
+list(TRANSFORM public_includes PREPEND "include/hldp/")
 list(TRANSFORM fmt_includes PREPEND "lib/fmt/include/fmt/")
 
 set(sources
+  api/api.cpp
   parser/parser.cpp
   utils/bitbuffer.cpp
 )
-
 set(fmt_sources format.cc)
 
 list(TRANSFORM sources PREPEND "src/")
@@ -45,4 +48,11 @@ add_library(hldp STATIC
   ${fmt_sources}
 )
 
-target_include_directories(hldp PRIVATE lib/fmt/include)
+target_include_directories(hldp
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+
+  PRIVATE
+    lib/fmt/include
+)
