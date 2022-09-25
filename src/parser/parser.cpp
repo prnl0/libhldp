@@ -1,11 +1,13 @@
-#include "parser.h"
+#include "parser.hpp"
 
 #include <filesystem>
 #include <cstdint>
 
-#include "demo.h"
+#include "fmt/format.h"
 
-#include "../utils/misc.h"
+#include "demo.hpp"
+
+#include "../utils/misc.hpp"
 
 parser::parser(const std::filesystem::path &demopath) : fdemo_(demopath)
 {
@@ -53,7 +55,7 @@ void parser::parse_directories()
 
   /* TODO: check for bogus amount of directories. */
   if (dir_count == 0) {
-    throw parser_error(std::format("invalid number of directory entries ({})", dir_count));
+    throw parser_error(fmt::format("invalid number of directory entries ({})", dir_count));
   }
 
   for (decltype(dir_count) i = 0; i != dir_count; ++i) {

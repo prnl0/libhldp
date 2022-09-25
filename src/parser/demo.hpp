@@ -83,11 +83,13 @@ struct demo
 
   struct console_command_frame : frame
   {
+    console_command_frame(const struct frame &f) {}
     std::string command;
   };
 
   struct client_data_frame : frame
   {
+    client_data_frame(const struct frame &f) {}
     float origin[3] = {0.0f};
     float viewangles[3] = {0.0f};
     std::int32_t wpn_bits = 0;
@@ -96,6 +98,7 @@ struct demo
 
   struct event_frame : frame
   {
+    event_frame(const struct frame &f) {}
     std::int32_t flags = 0;
     std::int32_t idx = 0;
     float delay = 0.0f;
@@ -116,12 +119,14 @@ struct demo
 
   struct weapon_animation_frame : frame
   {
+    weapon_animation_frame(const struct frame &f) {}
     std::int32_t anim = 0;
     std::int32_t body = 0;
   };
 
   struct sound_frame : frame
   {
+    sound_frame(const struct frame &f) {}
     std::int32_t channel = 0;
     std::int32_t sample_size = 0;
     std::string sample;
@@ -133,12 +138,15 @@ struct demo
 
   struct demo_buffer_frame : frame
   {
+    demo_buffer_frame(const struct frame &f) {}
     std::int32_t buff_len = 0;
     std::string buff;
   };
 
   struct game_data_frame : frame
   {
+    game_data_frame(const struct frame &f) {}
+
     struct
     {
       float timestamp = 0.0f;

@@ -4,7 +4,7 @@
 #include <fstream>
 #include <memory>
 
-#include "bitbuffer.h"
+#include "bitbuffer.hpp"
 
 namespace utils
 {
@@ -109,7 +109,7 @@ public:
   }
 
 private:
-  std::ifstream ifs_;
+  mutable std::ifstream ifs_;
   const std::filesystem::path &path_;
   std::streamoff size_ = 0;
   mutable std::unique_ptr<bit_buffer> datastream_;

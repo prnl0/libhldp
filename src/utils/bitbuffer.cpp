@@ -1,8 +1,9 @@
-#include "bitbuffer.h"
+#include "bitbuffer.hpp"
 
 #include <cstdint>
-#include <format>
 #include <string>
+
+#include "fmt/format.h"
 
 static constexpr std::uint64_t mask_table[] =
 {
@@ -37,12 +38,12 @@ bit_buffer::value_t bit_buffer::read_bits(ubyte_t amt) const
   }
   if (!is_remaining_n(amt)) {
     throw bit_buffer_error(
-      std::format("unable to read specified amount ({}) of bits - exceeded buffer size", amt)
+      fmt::format("unable to read specified amount ({}) of bits - exceeded buffer size", amt)
     );
   }
   if (amt > 64) {
     throw bit_buffer_error(
-      std::format("cannot read more than 64 bits at a time ({} requested)", amt)
+      fmt::format("cannot read more than 64 bits at a time ({} requested)", amt)
     );
   }
   if (amt == 0) {
@@ -83,7 +84,7 @@ template<>
 std::string bit_buffer::read<std::string>() const
 {
   std::string str;
-  for (ubyte_t b = 0; b = read_byte(); ) {
+  for (ubyte_t b = 0; (b = read_byte()); ) {
     str += b;
   }
   return str;
