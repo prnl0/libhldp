@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR) # >= 3.12 for C++20 support
 
 project(libhldp
   DESCRIPTION "GoldSrc demo parsing and analysis library"
-	VERSION 0.0.1
+  VERSION 0.0.1
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -stdlib=libc++")
