@@ -38,7 +38,7 @@ set(fmt_sources format.cc)
 list(TRANSFORM sources PREPEND "src/")
 list(TRANSFORM fmt_sources PREPEND "lib/fmt/src/")
 
-add_library(hldp STATIC
+add_library(${PROJECT_NAME} STATIC
   # Headers
   ${includes}
   ${fmt_includes}
@@ -48,11 +48,56 @@ add_library(hldp STATIC
   ${fmt_sources}
 )
 
-target_include_directories(hldp
+include(GNUInstallDirs)
+
+target_include_directories(${PROJECT_NAME}
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 
   PRIVATE
     lib/fmt/include
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${public_includes}")
+
+include(CMakePackageConfigHelpers)
+
+install(TARGETS ${PROJECT_NAME}
+  EXPORT "${PROJECT_NAME}_targets"
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_config_version.cmake"
+  VERSION "${version}"
+  COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/hldp_config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_config.cmake"
+  INSTALL_DESTINATION cmake
+)
+
+install(EXPORT "${PROJECT_NAME}_targets"
+  FILE "${PROJECT_NAME}_targets.cmake"
+  NAMESPACE hldp::
+  DESTINATION cmake
+)
+
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_config_version.cmake"
+  DESTINATION cmake
+)
+
+export(EXPORT "${PROJECT_NAME}_targets"
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}_targets.cmake"
+  NAMESPACE hldp::
 )

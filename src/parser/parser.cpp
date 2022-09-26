@@ -11,14 +11,18 @@
 
 parser::parser(const std::filesystem::path &demopath) : fdemo_(demopath)
 {
-  if (
-    fdemo_.size() < DEMO_CONST(demo, header_size) +
-      static_cast<decltype(fdemo_.size())>(DEMO_CONST(demo, dir_entry_size)) *
-      DEMO_CONST(demo, min_dir_entry_count)
-  ) {
-    throw parser_error(
-      "demo size is less than (header_size + min_dir_entry_count * dir_entry_size)"
-    );
+  static constexpr auto min_size = DEMO_CONST(demo, header_size) +
+    static_cast<decltype(fdemo_.size())>(DEMO_CONST(demo, dir_entry_size)) *
+    DEMO_CONST(demo, min_dir_entry_count);
+  if (fdemo_.size() < min_size) {
+    throw parser_error(fmt::format(
+      "demo size is less than (header_size + min_dir_entry_count * dir_entry_size " \
+        "= {}B + {}B * {}B = {}B)",
+      DEMO_CONST(demo, header_size),
+      DEMO_CONST(demo, dir_entry_size),
+      DEMO_CONST(demo, min_dir_entry_count),
+      min_size
+    ));
   }
 
   if (fdemo_.read<std::string>() != "HLDEMO") {

@@ -16,4 +16,4 @@ namespace hldp
   {
     delete parser_;
   }
-}
+} // namespace hldp
