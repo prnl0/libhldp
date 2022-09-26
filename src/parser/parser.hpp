@@ -17,12 +17,17 @@ class parser
 public:
   parser(const std::filesystem::path &demopath);
 
+  void parse()
+  {
+    parse_frames();
+  }
+
+private:
   void parse_header();
   void parse_directories();
   void parse_frames();
   void parse_messages();
 
-private:
   file_buffer fdemo_; // represents the demo file itself
   demo demo_;
 

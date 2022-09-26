@@ -3,13 +3,16 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-
 #include <unordered_map>
+
+#include "../utils/misc.hpp"
+
+#define DEMO_CONST(enum, member) utils::to_underlying(enum::constants_e::member)
 
 struct demo
 {
   /* All sizes listed as bytes. */
-  enum class constants : std::uint16_t
+  enum class constants_e : std::uint16_t
   {
     header_size = 544,
     header_signature_check_size = 6,
@@ -25,14 +28,14 @@ struct demo
 
   struct directory_entry
   {
-    enum class type : std::uint32_t
+    enum class type_e : std::uint32_t
     {
       loading = 0,
       playback,
       unknown
     };
 
-    type type = type::unknown;
+    type_e type = type_e::unknown;
     std::string description;
     std::int32_t flags = 0;
     std::int32_t cdtrack = 0;
@@ -44,7 +47,7 @@ struct demo
 
   struct frame
   {
-    enum
+    enum class constants_e : std::uint16_t
     {
       min_seg_size = 12,
       seg_console_command_size = 64,
@@ -54,14 +57,10 @@ struct demo
       seg_sound_size_1 = 8,
       seg_sound_size_2 = 16,
       seg_demo_buffer_size = 4,
-      seg_game_data_size = 468,
-      seg_game_data_demoinfo_size = 436,
-      seg_game_data_demoinfo_movevars_skyname_size = 32,
-      seg_game_data_min_message_length = 0,
-      seg_game_data_max_message_length = 65536
+      seg_game_data_size = 468
     };
 
-    enum class Type : std::uint8_t
+    enum class type_e : std::uint8_t
     {
       /* 0 and 1 -> game data */
       demo_start = 2, // no data
@@ -74,22 +73,29 @@ struct demo
       demo_buffer
     };
 
-    Type type = Type::demo_start;
-    float time = 0.0f;
-    std::uint32_t frame = 0;
+    frame() = default;
+    frame(const frame &f) : type(f.type), time(f.time), frame_no(f.frame_no)
+    {
+    }
 
-    static const std::unordered_map<Type, std::string> type_names;
+    type_e type = type_e::demo_start;
+    float time = 0.0f;
+    std::uint32_t frame_no = 0;
+
+    static const std::unordered_map<type_e, std::string> type_names;
   };
 
   struct console_command_frame : frame
   {
-    console_command_frame(const struct frame &f) {}
+    console_command_frame(const frame &f) : frame(f) {}
+    
     std::string command;
   };
 
   struct client_data_frame : frame
   {
-    client_data_frame(const struct frame &f) {}
+    client_data_frame(const frame &f) : frame(f) {}
+
     float origin[3] = {0.0f};
     float viewangles[3] = {0.0f};
     std::int32_t wpn_bits = 0;
@@ -98,7 +104,8 @@ struct demo
 
   struct event_frame : frame
   {
-    event_frame(const struct frame &f) {}
+    event_frame(const frame &f) : frame(f) {}
+
     std::int32_t flags = 0;
     std::int32_t idx = 0;
     float delay = 0.0f;
@@ -119,14 +126,16 @@ struct demo
 
   struct weapon_animation_frame : frame
   {
-    weapon_animation_frame(const struct frame &f) {}
+    weapon_animation_frame(const frame &f) : frame(f) {}
+
     std::int32_t anim = 0;
     std::int32_t body = 0;
   };
 
   struct sound_frame : frame
   {
-    sound_frame(const struct frame &f) {}
+    sound_frame(const frame &f) : frame(f) {}
+
     std::int32_t channel = 0;
     std::int32_t sample_size = 0;
     std::string sample;
@@ -138,14 +147,23 @@ struct demo
 
   struct demo_buffer_frame : frame
   {
-    demo_buffer_frame(const struct frame &f) {}
+    demo_buffer_frame(const frame &f) : frame(f) {}
+
     std::int32_t buff_len = 0;
     std::string buff;
   };
 
   struct game_data_frame : frame
   {
-    game_data_frame(const struct frame &f) {}
+    game_data_frame(const frame &f) : frame(f) {}
+
+    enum class constants_e : std::uint32_t
+    {
+      demoinfo_size = 436,
+      demoinfo_movevars_skyname_size = 32,
+      min_message_length = 0,
+      max_message_length = 65536
+    };
 
     struct
     {
@@ -227,7 +245,7 @@ struct demo
         float wave_height = 0.0f;
         std::int32_t footsteps = 0;
         std::string sky_name = std::string(
-          seg_game_data_demoinfo_movevars_skyname_size, '\0'
+          utils::to_underlying(constants_e::demoinfo_movevars_skyname_size), '\0'
         );
         float roll_angle = 0.0f;
         float roll_speed = 0.0f;
@@ -248,7 +266,6 @@ struct demo
     std::int32_t last_rel_sequence = 0;
 
     std::vector<std::uint8_t> data;
-    //std::vector<std::shared_ptr<demo_message>> messages;
   };
 
   std::int32_t dem_proto = 0;

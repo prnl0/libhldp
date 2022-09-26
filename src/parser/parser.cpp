@@ -12,18 +12,17 @@
 parser::parser(const std::filesystem::path &demopath) : fdemo_(demopath)
 {
   if (
-    fdemo_.size() <
-      utils::to_underlying(demo::constants::header_size) +
-      static_cast<decltype(fdemo_.size())>(demo::constants::dir_entry_size) *
-      utils::to_underlying(demo::constants::min_dir_entry_count)
+    fdemo_.size() < DEMO_CONST(demo, header_size) +
+      static_cast<decltype(fdemo_.size())>(DEMO_CONST(demo, dir_entry_size)) *
+      DEMO_CONST(demo, min_dir_entry_count)
   ) {
     throw parser_error(
-      "invalid demo - size is less than (header_size + min_dir_entry_count * dir_entry_size)"
+      "demo size is less than (header_size + min_dir_entry_count * dir_entry_size)"
     );
   }
 
   if (fdemo_.read<std::string>() != "HLDEMO") {
-    throw parser_error("invalid demo - bad header signature");
+    throw parser_error("bad demo signature");
   }
 
   /* Parse some data without user input to retrieve preliminary information. */
@@ -36,12 +35,12 @@ parser::parser(const std::filesystem::path &demopath) : fdemo_(demopath)
 void parser::parse_header()
 {
   fdemo_
-    .seek_bytes(utils::to_underlying(demo::constants::header_signature_size))
+    .seek_bytes(DEMO_CONST(demo, header_signature_size))
     .read(demo_.dem_proto)
     .read(demo_.net_proto);
-  fdemo_.read_string(utils::to_underlying(demo::constants::header_mapname_size));
+  fdemo_.read_string(DEMO_CONST(demo, header_mapname_size));
   fdemo_
-    .read(demo_.game_dir, utils::to_underlying(demo::constants::header_gamedir_size))
+    .read(demo_.game_dir, DEMO_CONST(demo, header_gamedir_size))
     .read(demo_.crc)
     .read(demo_.dir_offset);
 }
@@ -52,17 +51,23 @@ void parser::parse_directories()
   fdemo_
     .seek_bytes(demo_.dir_offset)
     .read(dir_count);
-
-  /* TODO: check for bogus amount of directories. */
-  if (dir_count == 0) {
-    throw parser_error(fmt::format("invalid number of directory entries ({})", dir_count));
+  if (
+    dir_count < DEMO_CONST(demo, min_dir_entry_count)
+    || dir_count > DEMO_CONST(demo, max_dir_entry_count)
+  ) {
+    throw parser_error(fmt::format(
+      "invalid number of directory entries (expected between {} and {}, got {})",
+      DEMO_CONST(demo, min_dir_entry_count),
+      DEMO_CONST(demo, max_dir_entry_count),
+      dir_count
+    ));
   }
 
   for (decltype(dir_count) i = 0; i != dir_count; ++i) {
     demo::directory_entry e;
     fdemo_
       .read(e.type)
-      .read(e.description, utils::to_underlying(demo::constants::dir_entry_description_size))
+      .read(e.description, DEMO_CONST(demo, dir_entry_description_size))
       .read(e.flags)
       .read(e.cdtrack)
       .read(e.track_time)
@@ -70,7 +75,7 @@ void parser::parse_directories()
       .read(e.offset)
       .read(e.file_length);
 
-    if (e.type == demo::directory_entry::type::playback) {
+    if (e.type == demo::directory_entry::type_e::playback) {
       demo_.duration = e.track_time;
       //frame_times_.reserve(
       //  /* TODO: usually occupies some frames less (up to 20-40k). */
@@ -92,56 +97,56 @@ void parser::parse_frames()
 
   //auto &lp = game_->local_player_;
   for (const auto &e : demo_.dir_entries) {
-  //  if (!prelim_info_gathered_ && game_->local_player_) {
-  //    basic_info_retrieved_ = true;
-  //    return;
-  //  }
+    //if (!prelim_info_gathered_ && game_->local_player_) {
+    //  prelim_info_gathered_ = true;
+    //  return;
+    //}
 
     fdemo_.seek_bytes(e.offset);
     bool next_dir = false;
     while (!next_dir) {
-      demo::frame df;
+      demo::frame frame;
       fdemo_
-        .read(df.type)
-        .read(df.time)
-        .read(df.frame);
+        .read(frame.type)
+        .read(frame.time)
+        .read(frame.frame_no);
 
-  //    if (
-  //      basic_info_retrieved_
-  //      && entry.type == Demo::DirectoryEntry::Type::playback
-  //      && valid_frames_
-  //      ) {
-  //      cur_frame_ = df.frame;
+      //if (
+      //  basic_info_retrieved_
+      //  && entry.type == Demo::DirectoryEntry::type_e::playback
+      //  && valid_frames_
+      //  ) {
+      //  cur_frame_ = frame.frame;
 
-  //      /* Avoids duped frames. */
-  //      if (df.frame >= frame_times_.size()) {
-  //        if (cur_frame_ > 2) {
-  //          fps_.push_back(1 / (df.time - frame_times_.back()));
-  //        }
-  //        frame_times_.push_back(df.time);
-  //      }
-  //    } else if (df.frame == 0) {
-  //      valid_frames_ = true;
-  //    }
+      //  /* Avoids duped frames. */
+      //  if (frame.frame >= frame_times_.size()) {
+      //    if (cur_frame_ > 2) {
+      //      fps_.push_back(1 / (frame.time - frame_times_.back()));
+      //    }
+      //    frame_times_.push_back(frame.time);
+      //  }
+      //} else if (frame.frame == 0) {
+      //  valid_frames_ = true;
+      //}
 
-      switch (df.type) {
-        case demo::frame::Type::demo_start: {
-          //store_frame(df, "demo_start");
+      switch (frame.type) {
+        case demo::frame::type_e::demo_start: {
+          //store_frame(frame, "demo_start");
           break;
         }
 
-        case demo::frame::Type::console_command: {
-          demo::console_command_frame ccf(df);
-          fdemo_.read(ccf.command, demo::frame::seg_console_command_size);
-          if (prelim_info_gathered_) {
-            //config_.cl_cmds.push_back({cur_frame_, ccf.command});
-          }
+        case demo::frame::type_e::console_command: {
+          demo::console_command_frame ccf(frame);
+          fdemo_.read(ccf.command, DEMO_CONST(demo::frame, seg_console_command_size));
+          //if (prelim_info_gathered_) {
+          //  config_.cl_cmds.push_back({cur_frame_, ccf.command});
+          //}
           //store_frame(ccf, "console_command");
           break;
         }
 
-        case demo::frame::Type::client_data: {
-          demo::client_data_frame cdf(df);
+        case demo::frame::type_e::client_data: {
+          demo::client_data_frame cdf(frame);
           fdemo_
             .read(cdf.origin[0])
             .read(cdf.origin[1])
@@ -178,14 +183,14 @@ void parser::parse_frames()
           break;
         }
 
-        case demo::frame::Type::next_section: {
+        case demo::frame::type_e::next_section: {
           next_dir = true;
-          //store_frame(df, "next_section");
+          //store_frame(frame, "next_section");
           break;
         }
 
-        case demo::frame::Type::event: {
-          demo::event_frame ef(df);
+        case demo::frame::type_e::event: {
+          demo::event_frame ef(frame);
           fdemo_
             .read(ef.flags)
             .read(ef.idx)
@@ -212,8 +217,8 @@ void parser::parse_frames()
           break;
         }
 
-        case demo::frame::Type::weapon_anim: {
-          demo::weapon_animation_frame waf(df);
+        case demo::frame::type_e::weapon_anim: {
+          demo::weapon_animation_frame waf(frame);
           fdemo_
             .read(waf.anim)
             .read(waf.body);
@@ -221,8 +226,8 @@ void parser::parse_frames()
           break;
         }
 
-        case demo::frame::Type::sound: {
-          demo::sound_frame sf(df);
+        case demo::frame::type_e::sound: {
+          demo::sound_frame sf(frame);
           fdemo_
             .read(sf.channel)
             .read(sf.sample_size)
@@ -235,8 +240,8 @@ void parser::parse_frames()
           break;
         }
 
-        case demo::frame::Type::demo_buffer: {
-          demo::demo_buffer_frame dbf(df);
+        case demo::frame::type_e::demo_buffer: {
+          demo::demo_buffer_frame dbf(frame);
           fdemo_
             .read(dbf.buff_len)
             .read(dbf.buff, dbf.buff_len);
@@ -244,158 +249,158 @@ void parser::parse_frames()
           break;
         }
 
-  //      /* Game data (types: 0, 1) */
-  //      default:
-  //      {
-  //        GameDataFrame gdf(df);
+        /* Game data (types: 0, 1) */
+        default: {
+          demo::game_data_frame gdf(frame);
 
-  //        fb.read(gdf.demo_info.timestamp);
+          fdemo_
+            .read(gdf.demo_info.timestamp)
 
-  //        fb.read(gdf.demo_info.ref_params.vieworg[0]);
-  //        fb.read(gdf.demo_info.ref_params.vieworg[1]);
-  //        fb.read(gdf.demo_info.ref_params.vieworg[2]);
-  //        fb.read(gdf.demo_info.ref_params.viewangles[0]);
-  //        fb.read(gdf.demo_info.ref_params.viewangles[1]);
-  //        fb.read(gdf.demo_info.ref_params.viewangles[2]);
-  //        fb.read(gdf.demo_info.ref_params.forward[0]);
-  //        fb.read(gdf.demo_info.ref_params.forward[1]);
-  //        fb.read(gdf.demo_info.ref_params.forward[2]);
-  //        fb.read(gdf.demo_info.ref_params.right[0]);
-  //        fb.read(gdf.demo_info.ref_params.right[1]);
-  //        fb.read(gdf.demo_info.ref_params.right[2]);
-  //        fb.read(gdf.demo_info.ref_params.up[0]);
-  //        fb.read(gdf.demo_info.ref_params.up[1]);
-  //        fb.read(gdf.demo_info.ref_params.up[2]);
-  //        fb.read(gdf.demo_info.ref_params.frame_time);
-  //        fb.read(gdf.demo_info.ref_params.time);
-  //        fb.read(gdf.demo_info.ref_params.intermission);
-  //        fb.read(gdf.demo_info.ref_params.paused);
-  //        fb.read(gdf.demo_info.ref_params.spectator);
-  //        fb.read(gdf.demo_info.ref_params.onground);
-  //        fb.read(gdf.demo_info.ref_params.waterlevel);
-  //        fb.read(gdf.demo_info.ref_params.simvel[0]);
-  //        fb.read(gdf.demo_info.ref_params.simvel[1]);
-  //        fb.read(gdf.demo_info.ref_params.simvel[2]);
-  //        fb.read(gdf.demo_info.ref_params.simorg[0]);
-  //        fb.read(gdf.demo_info.ref_params.simorg[1]);
-  //        fb.read(gdf.demo_info.ref_params.simorg[2]);
-  //        fb.read(gdf.demo_info.ref_params.viewheight[0]);
-  //        fb.read(gdf.demo_info.ref_params.viewheight[1]);
-  //        fb.read(gdf.demo_info.ref_params.viewheight[2]);
-  //        fb.read(gdf.demo_info.ref_params.ideal_pitch);
-  //        fb.read(gdf.demo_info.ref_params.cl_viewangles[0]);
-  //        fb.read(gdf.demo_info.ref_params.cl_viewangles[1]);
-  //        fb.read(gdf.demo_info.ref_params.cl_viewangles[2]);
-  //        fb.read(gdf.demo_info.ref_params.health);
-  //        fb.read(gdf.demo_info.ref_params.crosshairangle[0]);
-  //        fb.read(gdf.demo_info.ref_params.crosshairangle[1]);
-  //        fb.read(gdf.demo_info.ref_params.crosshairangle[2]);
-  //        fb.read(gdf.demo_info.ref_params.viewsize);
-  //        fb.read(gdf.demo_info.ref_params.punchangle[0]);
-  //        fb.read(gdf.demo_info.ref_params.punchangle[1]);
-  //        fb.read(gdf.demo_info.ref_params.punchangle[2]);
-  //        fb.read(gdf.demo_info.ref_params.max_clients);
-  //        fb.read(gdf.demo_info.ref_params.viewentity);
-  //        fb.read(gdf.demo_info.ref_params.playernum);
-  //        fb.read(gdf.demo_info.ref_params.max_entities);
-  //        fb.read(gdf.demo_info.ref_params.demo_playback);
-  //        fb.read(gdf.demo_info.ref_params.hardware);
-  //        fb.read(gdf.demo_info.ref_params.smoothing);
-  //        fb.read(gdf.demo_info.ref_params.ptr_cmd);
-  //        fb.read(gdf.demo_info.ref_params.ptr_movevars);
-  //        fb.read(gdf.demo_info.ref_params.viewport[0]);
-  //        fb.read(gdf.demo_info.ref_params.viewport[1]);
-  //        fb.read(gdf.demo_info.ref_params.viewport[2]);
-  //        fb.read(gdf.demo_info.ref_params.viewport[3]);
-  //        fb.read(gdf.demo_info.ref_params.next_view);
-  //        fb.read(gdf.demo_info.ref_params.only_client_draw);
+            .read(gdf.demo_info.ref_params.vieworg[0])
+            .read(gdf.demo_info.ref_params.vieworg[1])
+            .read(gdf.demo_info.ref_params.vieworg[2])
+            .read(gdf.demo_info.ref_params.viewangles[0])
+            .read(gdf.demo_info.ref_params.viewangles[1])
+            .read(gdf.demo_info.ref_params.viewangles[2])
+            .read(gdf.demo_info.ref_params.forward[0])
+            .read(gdf.demo_info.ref_params.forward[1])
+            .read(gdf.demo_info.ref_params.forward[2])
+            .read(gdf.demo_info.ref_params.right[0])
+            .read(gdf.demo_info.ref_params.right[1])
+            .read(gdf.demo_info.ref_params.right[2])
+            .read(gdf.demo_info.ref_params.up[0])
+            .read(gdf.demo_info.ref_params.up[1])
+            .read(gdf.demo_info.ref_params.up[2])
+            .read(gdf.demo_info.ref_params.frame_time)
+            .read(gdf.demo_info.ref_params.time)
+            .read(gdf.demo_info.ref_params.intermission)
+            .read(gdf.demo_info.ref_params.paused)
+            .read(gdf.demo_info.ref_params.spectator)
+            .read(gdf.demo_info.ref_params.onground)
+            .read(gdf.demo_info.ref_params.waterlevel)
+            .read(gdf.demo_info.ref_params.simvel[0])
+            .read(gdf.demo_info.ref_params.simvel[1])
+            .read(gdf.demo_info.ref_params.simvel[2])
+            .read(gdf.demo_info.ref_params.simorg[0])
+            .read(gdf.demo_info.ref_params.simorg[1])
+            .read(gdf.demo_info.ref_params.simorg[2])
+            .read(gdf.demo_info.ref_params.viewheight[0])
+            .read(gdf.demo_info.ref_params.viewheight[1])
+            .read(gdf.demo_info.ref_params.viewheight[2])
+            .read(gdf.demo_info.ref_params.ideal_pitch)
+            .read(gdf.demo_info.ref_params.cl_viewangles[0])
+            .read(gdf.demo_info.ref_params.cl_viewangles[1])
+            .read(gdf.demo_info.ref_params.cl_viewangles[2])
+            .read(gdf.demo_info.ref_params.health)
+            .read(gdf.demo_info.ref_params.crosshairangle[0])
+            .read(gdf.demo_info.ref_params.crosshairangle[1])
+            .read(gdf.demo_info.ref_params.crosshairangle[2])
+            .read(gdf.demo_info.ref_params.viewsize)
+            .read(gdf.demo_info.ref_params.punchangle[0])
+            .read(gdf.demo_info.ref_params.punchangle[1])
+            .read(gdf.demo_info.ref_params.punchangle[2])
+            .read(gdf.demo_info.ref_params.max_clients)
+            .read(gdf.demo_info.ref_params.viewentity)
+            .read(gdf.demo_info.ref_params.playernum)
+            .read(gdf.demo_info.ref_params.max_entities)
+            .read(gdf.demo_info.ref_params.demo_playback)
+            .read(gdf.demo_info.ref_params.hardware)
+            .read(gdf.demo_info.ref_params.smoothing)
+            .read(gdf.demo_info.ref_params.ptr_cmd)
+            .read(gdf.demo_info.ref_params.ptr_movevars)
+            .read(gdf.demo_info.ref_params.viewport[0])
+            .read(gdf.demo_info.ref_params.viewport[1])
+            .read(gdf.demo_info.ref_params.viewport[2])
+            .read(gdf.demo_info.ref_params.viewport[3])
+            .read(gdf.demo_info.ref_params.next_view)
+            .read(gdf.demo_info.ref_params.only_client_draw)
 
-  //        fb.read(gdf.demo_info.user_cmd.lerp_msec);
-  //        fb.read(gdf.demo_info.user_cmd.msec);
-  //        fb.read(gdf.demo_info.user_cmd.pad1);
-  //        fb.read(gdf.demo_info.user_cmd.viewangles[0]);
-  //        fb.read(gdf.demo_info.user_cmd.viewangles[1]);
-  //        fb.read(gdf.demo_info.user_cmd.viewangles[2]);
-  //        fb.read(gdf.demo_info.user_cmd.forwardmove);
-  //        fb.read(gdf.demo_info.user_cmd.sidemove);
-  //        fb.read(gdf.demo_info.user_cmd.upmove);
-  //        fb.read(gdf.demo_info.user_cmd.lightlevel);
-  //        fb.read(gdf.demo_info.user_cmd.pad2);
-  //        fb.read(gdf.demo_info.user_cmd.buttons);
-  //        fb.read(gdf.demo_info.user_cmd.impulse);
-  //        fb.read(gdf.demo_info.user_cmd.weapon_select);
-  //        fb.read(gdf.demo_info.user_cmd.pad3[0]);
-  //        fb.read(gdf.demo_info.user_cmd.pad3[1]);
-  //        fb.read(gdf.demo_info.user_cmd.impact_idx);
-  //        fb.read(gdf.demo_info.user_cmd.impact_pos[0]);
-  //        fb.read(gdf.demo_info.user_cmd.impact_pos[1]);
-  //        fb.read(gdf.demo_info.user_cmd.impact_pos[2]);
+            .read(gdf.demo_info.user_cmd.lerp_msec)
+            .read(gdf.demo_info.user_cmd.msec)
+            .read(gdf.demo_info.user_cmd.pad1)
+            .read(gdf.demo_info.user_cmd.viewangles[0])
+            .read(gdf.demo_info.user_cmd.viewangles[1])
+            .read(gdf.demo_info.user_cmd.viewangles[2])
+            .read(gdf.demo_info.user_cmd.forwardmove)
+            .read(gdf.demo_info.user_cmd.sidemove)
+            .read(gdf.demo_info.user_cmd.upmove)
+            .read(gdf.demo_info.user_cmd.lightlevel)
+            .read(gdf.demo_info.user_cmd.pad2)
+            .read(gdf.demo_info.user_cmd.buttons)
+            .read(gdf.demo_info.user_cmd.impulse)
+            .read(gdf.demo_info.user_cmd.weapon_select)
+            .read(gdf.demo_info.user_cmd.pad3[0])
+            .read(gdf.demo_info.user_cmd.pad3[1])
+            .read(gdf.demo_info.user_cmd.impact_idx)
+            .read(gdf.demo_info.user_cmd.impact_pos[0])
+            .read(gdf.demo_info.user_cmd.impact_pos[1])
+            .read(gdf.demo_info.user_cmd.impact_pos[2])
 
-  //        fb.read(gdf.demo_info.move_vars.gravity);
-  //        fb.read(gdf.demo_info.move_vars.stopspeed);
-  //        fb.read(gdf.demo_info.move_vars.maxspeed);
-  //        fb.read(gdf.demo_info.move_vars.spec_max_speed);
-  //        fb.read(gdf.demo_info.move_vars.accelerate);
-  //        fb.read(gdf.demo_info.move_vars.air_accelerate);
-  //        fb.read(gdf.demo_info.move_vars.water_accelerate);
-  //        fb.read(gdf.demo_info.move_vars.friction);
-  //        fb.read(gdf.demo_info.move_vars.edge_friction);
-  //        fb.read(gdf.demo_info.move_vars.water_friction);
-  //        fb.read(gdf.demo_info.move_vars.ent_gravity);
-  //        fb.read(gdf.demo_info.move_vars.bounce);
-  //        fb.read(gdf.demo_info.move_vars.step_size);
-  //        fb.read(gdf.demo_info.move_vars.max_velocity);
-  //        fb.read(gdf.demo_info.move_vars.z_max);
-  //        fb.read(gdf.demo_info.move_vars.wave_height);
-  //        fb.read(gdf.demo_info.move_vars.footsteps);
-  //        fb.read_string(
-  //          gdf.demo_info.move_vars.sky_name,
-  //          DemoFrame::seg_game_data_demoinfo_movevars_skyname_size
-  //        );
-  //        fb.read(gdf.demo_info.move_vars.roll_angle);
-  //        fb.read(gdf.demo_info.move_vars.roll_speed);
-  //        fb.read(gdf.demo_info.move_vars.sky_color[0]);
-  //        fb.read(gdf.demo_info.move_vars.sky_color[1]);
-  //        fb.read(gdf.demo_info.move_vars.sky_color[2]);
-  //        fb.read(gdf.demo_info.move_vars.sky_vec[0]);
-  //        fb.read(gdf.demo_info.move_vars.sky_vec[1]);
-  //        fb.read(gdf.demo_info.move_vars.sky_vec[2]);
+            .read(gdf.demo_info.move_vars.gravity)
+            .read(gdf.demo_info.move_vars.stopspeed)
+            .read(gdf.demo_info.move_vars.maxspeed)
+            .read(gdf.demo_info.move_vars.spec_max_speed)
+            .read(gdf.demo_info.move_vars.accelerate)
+            .read(gdf.demo_info.move_vars.air_accelerate)
+            .read(gdf.demo_info.move_vars.water_accelerate)
+            .read(gdf.demo_info.move_vars.friction)
+            .read(gdf.demo_info.move_vars.edge_friction)
+            .read(gdf.demo_info.move_vars.water_friction)
+            .read(gdf.demo_info.move_vars.ent_gravity)
+            .read(gdf.demo_info.move_vars.bounce)
+            .read(gdf.demo_info.move_vars.step_size)
+            .read(gdf.demo_info.move_vars.max_velocity)
+            .read(gdf.demo_info.move_vars.z_max)
+            .read(gdf.demo_info.move_vars.wave_height)
+            .read(gdf.demo_info.move_vars.footsteps)
+            .read(
+              gdf.demo_info.move_vars.sky_name,
+              DEMO_CONST(demo::game_data_frame, demoinfo_movevars_skyname_size)
+            )
+            .read(gdf.demo_info.move_vars.roll_angle)
+            .read(gdf.demo_info.move_vars.roll_speed)
+            .read(gdf.demo_info.move_vars.sky_color[0])
+            .read(gdf.demo_info.move_vars.sky_color[1])
+            .read(gdf.demo_info.move_vars.sky_color[2])
+            .read(gdf.demo_info.move_vars.sky_vec[0])
+            .read(gdf.demo_info.move_vars.sky_vec[1])
+            .read(gdf.demo_info.move_vars.sky_vec[2])
 
-  //        fb.read(gdf.demo_info.view[0]);
-  //        fb.read(gdf.demo_info.view[1]);
-  //        fb.read(gdf.demo_info.view[2]);
-  //        fb.read(gdf.demo_info.viewmodel);
+            .read(gdf.demo_info.view[0])
+            .read(gdf.demo_info.view[1])
+            .read(gdf.demo_info.view[2])
+            .read(gdf.demo_info.viewmodel)
 
-  //        fb.read(gdf.inc_sequence);
-  //        fb.read(gdf.inc_acknowledged);
-  //        fb.read(gdf.inc_rel_acknowledged);
-  //        fb.read(gdf.inc_rel_sequence);
-  //        fb.read(gdf.out_sequence);
-  //        fb.read(gdf.rel_sequence);
-  //        fb.read(gdf.last_rel_sequence);
+            .read(gdf.inc_sequence)
+            .read(gdf.inc_acknowledged)
+            .read(gdf.inc_rel_acknowledged)
+            .read(gdf.inc_rel_sequence)
+            .read(gdf.out_sequence)
+            .read(gdf.rel_sequence)
+            .read(gdf.last_rel_sequence);
 
-  //        std::uint32_t data_len = 0;
-  //        fb.read(data_len);
+          std::uint32_t data_len = 0;
+          fdemo_.read(data_len);
 
-  //        if (data_len != 0) {
-  //          gdf.data = fb.read_bytes(data_len);
-  //          parse_net_data(gdf.data);
-  //        }
+          if (data_len != 0) {
+            //gdf.data = fdemo_.read_bytes(data_len);
+            //parse_net_data(gdf.data);
+          }
 
-  //        if (prelim_info_gathered_ && lp) {
-  //          lp->store(lp->health_, gdf.demo_info.ref_params.health * 1.0f);
-  //        }
+          //if (prelim_info_gathered_ && lp) {
+          //  lp->store(lp->health_, gdf.demo_info.ref_params.health * 1.0f);
+          //}
 
-  //        store_frame(entry, gdf, "game_data");
-  //        break;
-  //      }
+          //store_frame(entry, gdf, "game_data");
+          break;
+        }
       }
     }
   }
 
   if (prelim_info_gathered_) {
-  //  release_filebuffer();
-  //  frame_times_.shrink_to_fit();
-  //  parsed_ = true;
+    //release_filebuffer();
+    //frame_times_.shrink_to_fit();
+    //parsed_ = true;
   }
 }

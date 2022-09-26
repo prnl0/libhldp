@@ -16,8 +16,8 @@ namespace file
     fs.seekg(0);
     return sz;
   }
-}; // namespace file
-}; // namespace utils
+} // namespace file
+} // namespace utils
 
 class file_buffer
 {

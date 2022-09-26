@@ -9,4 +9,4 @@ namespace utils
   {
     return static_cast<std::underlying_type_t<T>>(val);
   }
-}; // namespace utils
+} // namespace utils
