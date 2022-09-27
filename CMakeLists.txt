@@ -26,7 +26,7 @@ set(fmt_includes
 
 list(TRANSFORM includes PREPEND "src/")
 list(TRANSFORM public_includes PREPEND "include/hldp/")
-list(TRANSFORM fmt_includes PREPEND "lib/fmt/include/fmt/")
+list(TRANSFORM fmt_includes PREPEND "thirdparty/fmt/include/fmt/")
 
 set(sources
   api/api.cpp
@@ -36,7 +36,7 @@ set(sources
 set(fmt_sources format.cc)
 
 list(TRANSFORM sources PREPEND "src/")
-list(TRANSFORM fmt_sources PREPEND "lib/fmt/src/")
+list(TRANSFORM fmt_sources PREPEND "thirdparty/fmt/src/")
 
 add_library(${PROJECT_NAME} STATIC
   # Headers
@@ -56,7 +56,7 @@ target_include_directories(${PROJECT_NAME}
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 
   PRIVATE
-    lib/fmt/include
+    thirdparty/fmt/include
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${public_includes}")
