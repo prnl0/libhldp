@@ -64,6 +64,11 @@ public:
     return datastream_->read_string(sz);
   }
 
+  bit_buffer::data_t read_bytes(bit_buffer::size_t amt) const
+  {
+    return datastream_->read_bytes(amt);
+  }
+
   /* Position operations */
   const file_buffer &seek_bytes(
     bit_buffer::size_t amt,

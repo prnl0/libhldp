@@ -8,44 +8,44 @@ project(hldp
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(includes
+set(HLDP_HEADERS
   parser/demo.hpp
   parser/parser.hpp
   utils/bitbuffer.hpp
   utils/filebuffer.hpp
   utils/misc.hpp
 )
-set(public_includes
+set(HLDP_PUBLIC_HEADERS
   api.hpp
 )
-set(fmt_includes
+set(HLDP_FMT_HEADERS
   core.h
   format.h
   format-inl.h
 )
 
-list(TRANSFORM includes PREPEND "src/")
-list(TRANSFORM public_includes PREPEND "include/hldp/")
-list(TRANSFORM fmt_includes PREPEND "thirdparty/fmt/include/fmt/")
+list(TRANSFORM HLDP_HEADERS PREPEND "src/")
+list(TRANSFORM HLDP_PUBLIC_HEADERS PREPEND "include/hldp/")
+list(TRANSFORM HLDP_FMT_HEADERS PREPEND "thirdparty/fmt/include/fmt/")
 
-set(sources
+set(HLDP_SOURCES
   api/api.cpp
   parser/parser.cpp
   utils/bitbuffer.cpp
 )
-set(fmt_sources format.cc)
+set(HLDP_FMT_SOURCES format.cc)
 
-list(TRANSFORM sources PREPEND "src/")
-list(TRANSFORM fmt_sources PREPEND "thirdparty/fmt/src/")
+list(TRANSFORM HLDP_SOURCES PREPEND "src/")
+list(TRANSFORM HLDP_FMT_SOURCES PREPEND "thirdparty/fmt/src/")
 
 add_library(${PROJECT_NAME} STATIC
   # Headers
-  ${includes}
-  ${fmt_includes}
+  ${HLDP_HEADERS}
+  ${HLDP_FMT_HEADERS}
 
   # Sources
-  ${sources}
-  ${fmt_sources}
+  ${HLDP_SOURCES}
+  ${HLDP_FMT_SOURCES}
 )
 
 include(GNUInstallDirs)
@@ -59,7 +59,7 @@ target_include_directories(${PROJECT_NAME}
     thirdparty/fmt/include
 )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${public_includes}")
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${HLDP_PUBLIC_HEADERS}")
 
 include(CMakePackageConfigHelpers)
 

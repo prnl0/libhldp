@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "../utils/misc.hpp"
+#include "../utils/bitbuffer.hpp"
 
 #define DEMO_CONST(enum, member) utils::to_underlying(enum::constants_e::member)
 
@@ -265,7 +266,7 @@ struct demo
     std::int32_t rel_sequence = 0;
     std::int32_t last_rel_sequence = 0;
 
-    std::vector<std::uint8_t> data;
+    bit_buffer::data_t data;
   };
 
   std::int32_t dem_proto = 0;

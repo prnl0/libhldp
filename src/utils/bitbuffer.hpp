@@ -15,14 +15,12 @@ class bit_buffer_error : public std::runtime_error
 
 class bit_buffer
 {
+public:
   using ubyte_t = std::uint8_t;
   using value_t = std::uint64_t;
   using data_t = std::vector<ubyte_t>;
   using size_t = data_t::size_type;
 
-  friend class file_buffer;
-
-public:
   enum class seek_dir : std::uint8_t
   {
     /* Seek N bytes from the ... */

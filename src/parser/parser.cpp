@@ -7,6 +7,7 @@
 
 #include "demo.hpp"
 
+#include "../utils/bitbuffer.hpp"
 #include "../utils/misc.hpp"
 
 parser::parser(const std::filesystem::path &demopath) : fdemo_(demopath)
@@ -81,10 +82,6 @@ void parser::parse_directories()
 
     if (e.type == demo::directory_entry::type_e::playback) {
       demo_.duration = e.track_time;
-      //frame_times_.reserve(
-      //  /* TODO: usually occupies some frames less (up to 20-40k). */
-      //  static_cast<decltype(frame_times_)::size_type>(entry.frames) * 5
-      //);
     }
 
     demo_.dir_entries.push_back(std::move(e));
@@ -99,13 +96,7 @@ void parser::parse_frames()
     fdemo_.acquire_data();
   }
 
-  //auto &lp = game_->local_player_;
   for (const auto &e : demo_.dir_entries) {
-    //if (!prelim_info_gathered_ && game_->local_player_) {
-    //  prelim_info_gathered_ = true;
-    //  return;
-    //}
-
     fdemo_.seek_bytes(e.offset);
     bool next_dir = false;
     while (!next_dir) {
@@ -115,37 +106,14 @@ void parser::parse_frames()
         .read(frame.time)
         .read(frame.frame_no);
 
-      //if (
-      //  basic_info_retrieved_
-      //  && entry.type == Demo::DirectoryEntry::type_e::playback
-      //  && valid_frames_
-      //  ) {
-      //  cur_frame_ = frame.frame;
-
-      //  /* Avoids duped frames. */
-      //  if (frame.frame >= frame_times_.size()) {
-      //    if (cur_frame_ > 2) {
-      //      fps_.push_back(1 / (frame.time - frame_times_.back()));
-      //    }
-      //    frame_times_.push_back(frame.time);
-      //  }
-      //} else if (frame.frame == 0) {
-      //  valid_frames_ = true;
-      //}
-
       switch (frame.type) {
         case demo::frame::type_e::demo_start: {
-          //store_frame(frame, "demo_start");
           break;
         }
 
         case demo::frame::type_e::console_command: {
           demo::console_command_frame ccf(frame);
           fdemo_.read(ccf.command, DEMO_CONST(demo::frame, seg_console_command_size));
-          //if (prelim_info_gathered_) {
-          //  config_.cl_cmds.push_back({cur_frame_, ccf.command});
-          //}
-          //store_frame(ccf, "console_command");
           break;
         }
 
@@ -160,36 +128,11 @@ void parser::parse_frames()
             .read(cdf.viewangles[2])
             .read(cdf.wpn_bits)
             .read(cdf.fov);
-
-          //if (prelim_info_gathered_ && lp) {
-          //  lp->store(lp->position_[0], cdf.origin[0]);
-          //  lp->store(lp->position_[1], cdf.origin[1]);
-          //  lp->store(lp->position_[2], cdf.origin[2]);
-          //  lp->store(lp->viewangles_[0], cdf.viewangles[0]);
-          //  lp->store(lp->viewangles_[1], cdf.viewangles[1]);
-          //  lp->store(lp->viewangles_[2], cdf.viewangles[2]);
-          //  lp->store(lp->last_update_, cur_frame_);
-
-          //  if (cdf.origin[0] < game_->map_.bounds_.x1) {
-          //    game_->map_.bounds_.x1 = cdf.origin[0];
-          //  } else if (cdf.origin[0] > game_->map_.bounds_.x2) {
-          //    game_->map_.bounds_.x2 = cdf.origin[0];
-          //  }
-
-          //  if (cdf.origin[1] < game_->map_.bounds_.y1) {
-          //    game_->map_.bounds_.y1 = cdf.origin[1];
-          //  } else if (cdf.origin[1] > game_->map_.bounds_.y2) {
-          //    game_->map_.bounds_.y2 = cdf.origin[1];
-          //  }
-          //}
-
-          //store_frame(cdf, "client_data");
           break;
         }
 
         case demo::frame::type_e::next_section: {
           next_dir = true;
-          //store_frame(frame, "next_section");
           break;
         }
 
@@ -217,7 +160,6 @@ void parser::parse_frames()
             .read(ef.args.iparams[1])
             .read(ef.args.bparams[0])
             .read(ef.args.bparams[1]);
-          //store_frame(ef, "event");
           break;
         }
 
@@ -226,7 +168,6 @@ void parser::parse_frames()
           fdemo_
             .read(waf.anim)
             .read(waf.body);
-          //store_frame(waf, "weapon_animation");
           break;
         }
 
@@ -240,7 +181,6 @@ void parser::parse_frames()
             .read(sf.volume)
             .read(sf.flags)
             .read(sf.pitch);
-          //store_frame(sf, "sound");
           break;
         }
 
@@ -249,7 +189,6 @@ void parser::parse_frames()
           fdemo_
             .read(dbf.buff_len)
             .read(dbf.buff, dbf.buff_len);
-          //store_frame(dbf, "demo_buffer");
           break;
         }
 
@@ -385,26 +324,19 @@ void parser::parse_frames()
 
           std::uint32_t data_len = 0;
           fdemo_.read(data_len);
-
           if (data_len != 0) {
-            //gdf.data = fdemo_.read_bytes(data_len);
-            //parse_net_data(gdf.data);
+            gdf.data = fdemo_.read_bytes(data_len);
+            parse_net_data(gdf.data);
           }
 
-          //if (prelim_info_gathered_ && lp) {
-          //  lp->store(lp->health_, gdf.demo_info.ref_params.health * 1.0f);
-          //}
-
-          //store_frame(entry, gdf, "game_data");
           break;
         }
       }
     }
   }
+}
 
-  if (prelim_info_gathered_) {
-    //release_filebuffer();
-    //frame_times_.shrink_to_fit();
-    //parsed_ = true;
-  }
+void parser::parse_net_data(const bit_buffer::data_t &data)
+{
+
 }

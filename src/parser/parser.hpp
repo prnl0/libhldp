@@ -6,6 +6,7 @@
 #include "demo.hpp"
 
 #include "../utils/filebuffer.hpp"
+#include "../utils/bitbuffer.hpp"
 
 class parser_error : public std::runtime_error
 {
@@ -26,7 +27,7 @@ private:
   void parse_header();
   void parse_directories();
   void parse_frames();
-  void parse_messages();
+  void parse_net_data(const bit_buffer::data_t &data);
 
   file_buffer fdemo_; // represents the demo file itself
   demo demo_;
